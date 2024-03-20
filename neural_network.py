@@ -3,19 +3,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
-
+from sklearn.preprocessing import scale
 #%%
 df = pd.read_csv("college.csv")
-y = df[["Private"]]
-X = df.iloc[:,2:]
-
+y = df[["Private"]].values
+X = df.iloc[:,2:].values
+#%%
+X = scale(X, axis =0, with_mean = True, with_std = True)
 X_train, X_test, y_train, y_test = train_test_split(X,y,
                                                     test_size = 0.2, random_state = 1)
-
+#%%
 # initialize a neural network
 L = 4 # no layers
 # Define number of neurons per layer
-n = [len(X.columns),4, 4, len(y["Private"].unique())]
+n = [X.shape[1],4, 4, len(np.unique(y))]
 # choose random weights and biases
 np.random.seed(0)
 Weights = dict()
@@ -41,8 +42,8 @@ for i in range(0,Niter):
     # choose a training point randomly
     k = np.random.randint(0, y_train.shape[0]-1)
     # feed it to the network
-    x = np.array(X_train.iloc[k])
-    a[1] = np.reshape(x, (len(x),1))
+    x = np.reshape(X_train[k], (X_train[k].shape[0],1))
+    a[1] = x
     # forward pass
     for l in range (2,L+1):
         prod = np.dot(Weights[l], a[l-1])
@@ -84,12 +85,12 @@ fig.savefig("cost.png")
 #%% make predictions
 prediction = np.zeros(y_test.shape[0])
 for i in range(0, y_test.shape[0]):
-     prediction[i] = predict(forward_pass(X_test.iloc[i,:].values, Weights, biases, L))
+     prediction[i] = predict(forward_pass(X_test[i], Weights, biases, L))
 y_test_logical = np.array([y_test["Private"] == "No"]).flatten()
 #%%
 cm = confusion_matrix(y_test_logical, y_test_logical)
 cm_display = ConfusionMatrixDisplay(cm).plot()
-
+cm_display.figure_.savefig("confusion_matrix.png")
 
 #%%
 def sigmoid(z):
@@ -104,7 +105,7 @@ def calculate_cost(y_train, X_train, Weights, biases, L):
     Cost = 0
     # iterate over all training observations
     for i in range(0, y_train.shape[0]):
-        a = X_train.iloc[i,:].values.reshape(-1,1)
+        a = X_train[i].reshape(-1,1)
         # feed the observation the NN
         for l in range(2,L+1):
             z = np.dot(Weights[l], a) + biases[l]
